@@ -1,40 +1,21 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { S3Client, GetObjectCommand, HeadObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import type { StoredPage } from "@/lib/types";
-
-const bucket = process.env.R2_BUCKET_NAME;
-const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
-const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
+import { put } from "@vercel/blob";
+import { hasBlobStorage } from "@/lib/env";
+import { getRedis } from "@/lib/redis";
 
 const localRoot = path.join(process.cwd(), ".data");
 
-function hasR2() {
-  return Boolean(bucket && accountId && accessKeyId && secretAccessKey);
-}
-
-function getClient() {
-  if (!hasR2()) {
-    return null;
-  }
-
-  return new S3Client({
-    region: "auto",
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: accessKeyId!,
-      secretAccessKey: secretAccessKey!,
-    },
-  });
-}
-
-function pageKey(id: string) {
+function pageBlobPath(id: string) {
   return `pages/${id}.html`;
 }
 
+function pageMetaKey(id: string) {
+  return `page:${id}`;
+}
+
 function reportKey(id: string) {
-  return `reports/${id}/${Date.now()}.json`;
+  return `reports:${id}:${Date.now()}`;
 }
 
 async function localEnsureDir(filePath: string) {
@@ -63,49 +44,60 @@ async function localExists(key: string) {
 }
 
 export async function pageExists(id: string) {
-  if (hasR2()) {
-    const client = getClient()!;
-    try {
-      await client.send(new HeadObjectCommand({ Bucket: bucket, Key: pageKey(id) }));
-      return true;
-    } catch {
-      return false;
-    }
+  const redis = getRedis();
+  if (redis && hasBlobStorage()) {
+    return Boolean(await redis.get(pageMetaKey(id)));
   }
 
-  return localExists(pageKey(id));
+  return localExists(pageBlobPath(id));
 }
 
-export async function storePage(page: StoredPage) {
-  if (hasR2()) {
-    const client = getClient()!;
-    await client.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: pageKey(page.id),
-        Body: page.html,
-        ContentType: "text/html; charset=utf-8",
-      }),
-    );
-    return;
+export async function storePage(page: { id: string; html: string }) {
+  const redis = getRedis();
+  if (hasBlobStorage() && redis) {
+    const blob = await put(pageBlobPath(page.id), page.html, {
+      access: "public",
+      addRandomSuffix: false,
+      contentType: "text/html; charset=utf-8",
+    });
+
+    await redis.set(pageMetaKey(page.id), JSON.stringify({ url: blob.url }));
+
+    return { url: blob.url };
   }
 
-  await localWrite(pageKey(page.id), page.html);
+  await localWrite(pageBlobPath(page.id), page.html);
+  return { url: null };
 }
 
 export async function getStoredPage(id: string) {
-  if (hasR2()) {
-    const client = getClient()!;
-    const result = await client.send(
-      new GetObjectCommand({ Bucket: bucket, Key: pageKey(id) }),
-    );
-    const text = await result.Body?.transformToString();
-    return text ? ({ id, html: text, kind: "html" } satisfies StoredPage) : null;
+  const redis = getRedis();
+  if (redis && hasBlobStorage()) {
+    const raw = await redis.get(pageMetaKey(id));
+    if (typeof raw !== "string" || raw.length === 0) {
+      return null;
+    }
+
+    const meta = JSON.parse(raw) as { url: string };
+    if (!meta.url) {
+      return null;
+    }
+
+    const response = await fetch(meta.url, { cache: "no-store" });
+    if (!response.ok) {
+      return null;
+    }
+
+    return {
+      id,
+      html: await response.text(),
+      kind: "html" as const,
+    };
   }
 
   try {
-    const text = await localRead(pageKey(id));
-    return { id, html: text, kind: "html" } satisfies StoredPage;
+    const text = await localRead(pageBlobPath(id));
+    return { id, html: text, kind: "html" as const };
   } catch {
     return null;
   }
@@ -118,35 +110,11 @@ export async function storeReport(id: string, body: unknown) {
     createdAt: new Date().toISOString(),
   });
 
-  if (hasR2()) {
-    const client = getClient()!;
-    await client.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: reportKey(id),
-        Body: payload,
-        ContentType: "application/json; charset=utf-8",
-      }),
-    );
+  const redis = getRedis();
+  if (redis) {
+    await redis.set(reportKey(id), payload);
     return;
   }
 
   await localWrite(reportKey(id), payload);
-}
-
-export async function storeRawFile(key: string, body: string, contentType = "text/html; charset=utf-8") {
-  if (hasR2()) {
-    const client = getClient()!;
-    await client.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: key,
-        Body: body,
-        ContentType: contentType,
-      }),
-    );
-    return;
-  }
-
-  await localWrite(key, body);
 }

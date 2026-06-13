@@ -161,16 +161,16 @@ send the generated HTML to the endpoint above and return the URL.`}
       <section className="grid gap-6 border-t border-border/80 py-12 md:grid-cols-3">
         <div className="rounded-3xl border border-border bg-card p-6">
           <p className="text-sm text-muted">Storage</p>
-          <p className="mt-3 text-lg text-text">Cloudflare R2 first</p>
+          <p className="mt-3 text-lg text-text">Vercel Blob first</p>
           <p className="mt-3 text-sm leading-7 text-muted">
-            Raw HTML stored as objects. Cheap enough for thousands of pages.
+            Raw HTML stored as public blobs with a tiny Redis pointer layer.
           </p>
         </div>
         <div className="rounded-3xl border border-border bg-card p-6">
           <p className="text-sm text-muted">Safety</p>
           <p className="mt-3 text-lg text-text">Validation and throttling</p>
           <p className="mt-3 text-sm leading-7 text-muted">
-            Enforced size limits, basic sanitization, and per-IP rate limiting.
+            Enforced size limits, basic sanitization, and Upstash-backed per-IP rate limiting.
           </p>
         </div>
         <div className="rounded-3xl border border-border bg-card p-6">

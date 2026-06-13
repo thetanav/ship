@@ -41,6 +41,10 @@ Request body:
 Fetch stored HTML
 GET /api/page/[id]
 
+Storage
+Vercel Blob for HTML bytes
+Upstash Redis for page pointers and rate limits
+
 Public page
 GET /[id]
 

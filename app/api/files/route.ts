@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createPageId } from "@/lib/id";
 import { jsonResponse } from "@/lib/http";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitFiles } from "@/lib/rate-limit";
 import { buildMultiFileHtml } from "@/lib/site-builder";
 import { pageExists, storePage } from "@/lib/site";
 import type { PublishResponse } from "@/lib/types";
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     request.headers.get("x-real-ip") ??
     "unknown";
 
-  const limit = rateLimit(`files:${ip}`, 10, 60_000);
+  const limit = await rateLimitFiles(`files:${ip}`);
   if (!limit.allowed) {
     return jsonResponse(
       { success: false, error: "Rate limit exceeded." },
@@ -43,21 +43,29 @@ export async function POST(request: Request) {
     );
   }
 
-  let id = createPageId(6);
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    if (!(await pageExists(id))) {
-      break;
+    const id = createPageId(6);
+    if (await pageExists(id)) {
+      continue;
     }
-    id = createPageId(6);
+
+    try {
+      await storePage({ id, html });
+
+      const response: PublishResponse = {
+        success: true,
+        id,
+        url: `${siteUrl}/${id}`,
+      };
+
+      return jsonResponse(response, { status: 201 });
+    } catch {
+      // Retry on collisions or transient storage errors.
+    }
   }
 
-  await storePage({ id, html, kind: "files" });
-
-  const response: PublishResponse = {
-    success: true,
-    id,
-    url: `${siteUrl}/${id}`,
-  };
-
-  return jsonResponse(response, { status: 201 });
+  return jsonResponse(
+    { success: false, error: "Unable to publish files. Please retry." },
+    { status: 500 },
+  );
 }

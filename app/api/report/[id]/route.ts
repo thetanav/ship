@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { jsonResponse } from "@/lib/http";
+import { rateLimitReport } from "@/lib/rate-limit";
 import { storeReport } from "@/lib/site";
 
 const schema = z.object({
@@ -12,6 +13,19 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+
+  const limit = await rateLimitReport(`report:${ip}`);
+  if (!limit.allowed) {
+    return jsonResponse(
+      { success: false, error: "Rate limit exceeded." },
+      { status: 429, headers: { "retry-after": String(Math.ceil((limit.resetAt - Date.now()) / 1000)) } },
+    );
+  }
+
   const json = await request.json().catch(() => null);
   const parsed = schema.safeParse(json);
 

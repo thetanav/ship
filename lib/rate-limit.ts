@@ -1,23 +1,65 @@
+import { makeRateLimiter } from "@/lib/redis";
+
+type LimitResult = {
+  allowed: boolean;
+  remaining: number;
+  resetAt: number;
+};
+
+const publishLimiter = makeRateLimiter(20, "60 s");
+const filesLimiter = makeRateLimiter(10, "60 s");
+const reportLimiter = makeRateLimiter(20, "60 s");
+
+export async function rateLimitPublish(key: string): Promise<LimitResult> {
+  return rateLimitWithFallback(publishLimiter, key, 20, 60_000);
+}
+
+export async function rateLimitFiles(key: string): Promise<LimitResult> {
+  return rateLimitWithFallback(filesLimiter, key, 10, 60_000);
+}
+
+export async function rateLimitReport(key: string): Promise<LimitResult> {
+  return rateLimitWithFallback(reportLimiter, key, 20, 60_000);
+}
+
+async function rateLimitWithFallback(
+  limiter: ReturnType<typeof makeRateLimiter> | null,
+  key: string,
+  limit: number,
+  windowMs: number,
+) {
+  if (limiter) {
+    const result = await limiter.limit(key);
+    return {
+      allowed: result.success,
+      remaining: result.remaining,
+      resetAt: result.reset,
+    };
+  }
+
+  const now = Date.now();
+  const bucket = fallbackBuckets.get(key);
+
+  if (!bucket || bucket.resetAt <= now) {
+    fallbackBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, remaining: limit - 1, resetAt: now + windowMs };
+  }
+
+  if (bucket.count >= limit) {
+    return { allowed: false, remaining: 0, resetAt: bucket.resetAt };
+  }
+
+  bucket.count += 1;
+  return {
+    allowed: true,
+    remaining: Math.max(0, limit - bucket.count),
+    resetAt: bucket.resetAt,
+  };
+}
+
 type Bucket = {
   count: number;
   resetAt: number;
 };
 
-const buckets = new Map<string, Bucket>();
-
-export function rateLimit(key: string, limit: number, windowMs: number) {
-  const now = Date.now();
-  const current = buckets.get(key);
-
-  if (!current || current.resetAt <= now) {
-    buckets.set(key, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, remaining: limit - 1, resetAt: now + windowMs };
-  }
-
-  if (current.count >= limit) {
-    return { allowed: false, remaining: 0, resetAt: current.resetAt };
-  }
-
-  current.count += 1;
-  return { allowed: true, remaining: Math.max(0, limit - current.count), resetAt: current.resetAt };
-}
+const fallbackBuckets = new Map<string, Bucket>();
