@@ -1,6 +1,6 @@
 import { makeRateLimiter } from "@/lib/redis";
 
-type LimitResult = {
+export type LimitResult = {
   allowed: boolean;
   remaining: number;
   resetAt: number;
@@ -9,6 +9,7 @@ type LimitResult = {
 const publishLimiter = makeRateLimiter(20, "60 s");
 const filesLimiter = makeRateLimiter(10, "60 s");
 const reportLimiter = makeRateLimiter(20, "60 s");
+const globalLimiter = makeRateLimiter(200, "60 s");
 
 export async function rateLimitPublish(key: string): Promise<LimitResult> {
   return rateLimitWithFallback(publishLimiter, key, 20, 60_000);
@@ -20,6 +21,15 @@ export async function rateLimitFiles(key: string): Promise<LimitResult> {
 
 export async function rateLimitReport(key: string): Promise<LimitResult> {
   return rateLimitWithFallback(reportLimiter, key, 20, 60_000);
+}
+
+export async function rateLimitGlobal(key: string): Promise<LimitResult> {
+  return rateLimitWithFallback(globalLimiter, key, 200, 60_000);
+}
+
+export async function rateLimitCheck(key: string, limit: number, windowMs: number): Promise<LimitResult> {
+  const limiter = makeRateLimiter(limit, `${Math.floor(windowMs / 1000)} s`);
+  return rateLimitWithFallback(limiter, key, limit, windowMs);
 }
 
 async function rateLimitWithFallback(
@@ -57,9 +67,20 @@ async function rateLimitWithFallback(
   };
 }
 
+function cleanupExpiredBuckets() {
+  const now = Date.now();
+  for (const [key, bucket] of fallbackBuckets) {
+    if (bucket.resetAt <= now) {
+      fallbackBuckets.delete(key);
+    }
+  }
+}
+
 type Bucket = {
   count: number;
   resetAt: number;
 };
 
 const fallbackBuckets = new Map<string, Bucket>();
+
+setInterval(cleanupExpiredBuckets, 60_000);

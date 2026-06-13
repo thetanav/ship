@@ -7,3 +7,11 @@ export function hasUpstashRedis() {
     process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
   );
 }
+
+export function isDevelopment() {
+  return process.env.NODE_ENV !== "production";
+}
+
+export function getEnvName() {
+  return process.env.NODE_ENV || "development";
+}

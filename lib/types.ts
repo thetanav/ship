@@ -9,3 +9,9 @@ export type PublishResponse = {
   id: string;
   url: string;
 };
+
+export type ApiError = {
+  success: false;
+  error: string;
+  code?: string;
+};

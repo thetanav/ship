@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { createPageId } from "@/lib/id";
-import { jsonResponse } from "@/lib/http";
-import { rateLimitPublish } from "@/lib/rate-limit";
+import { jsonResponse, errorResponse } from "@/lib/http";
+import { rateLimitPublish, rateLimitGlobal } from "@/lib/rate-limit";
 import { buildSinglePageHtml } from "@/lib/site-builder";
 import { pageExists, storePage } from "@/lib/site";
 import type { PublishResponse } from "@/lib/types";
 import { siteUrl } from "@/lib/config";
+import { log, logError } from "@/lib/log";
 
 const payloadSchema = z.object({
   html: z.string().min(1).max(1_000_000),
@@ -17,30 +18,38 @@ export async function POST(request: Request) {
     request.headers.get("x-real-ip") ??
     "unknown";
 
+  const global = await rateLimitGlobal(`global:${ip}`);
+  if (!global.allowed) {
+    log("rate_limit_global", { ip, route: "publish" });
+    return errorResponse("Rate limit exceeded.", 429, {
+      code: "GLOBAL_RATE_LIMIT",
+      retryAfter: Math.ceil((global.resetAt - Date.now()) / 1000),
+    });
+  }
+
   const limit = await rateLimitPublish(`publish:${ip}`);
   if (!limit.allowed) {
-    return jsonResponse(
-      { success: false, error: "Rate limit exceeded." },
-      { status: 429, headers: { "retry-after": String(Math.ceil((limit.resetAt - Date.now()) / 1000)) } },
-    );
+    log("rate_limit_publish", { ip });
+    return errorResponse("Rate limit exceeded.", 429, {
+      code: "PUBLISH_RATE_LIMIT",
+      retryAfter: Math.ceil((limit.resetAt - Date.now()) / 1000),
+    });
   }
 
   const json = await request.json().catch(() => null);
   const parsed = payloadSchema.safeParse(json);
   if (!parsed.success) {
-    return jsonResponse(
-      { success: false, error: "Invalid request body." },
-      { status: 400 },
-    );
+    return errorResponse("Invalid request body.", 400, { code: "INVALID_BODY" });
   }
 
   let html: string;
   try {
     html = buildSinglePageHtml(parsed.data.html);
   } catch (error) {
-    return jsonResponse(
-      { success: false, error: error instanceof Error ? error.message : "Invalid HTML." },
-      { status: 400 },
+    return errorResponse(
+      error instanceof Error ? error.message : "Invalid HTML.",
+      400,
+      { code: "INVALID_HTML" },
     );
   }
 
@@ -53,6 +62,8 @@ export async function POST(request: Request) {
     try {
       await storePage({ id, html });
 
+      log("publish_success", { id, size: html.length, ip });
+
       const response: PublishResponse = {
         success: true,
         id,
@@ -60,13 +71,12 @@ export async function POST(request: Request) {
       };
 
       return jsonResponse(response, { status: 201 });
-    } catch {
-      // Retry on collisions or transient storage errors.
+    } catch (err) {
+      logError("publish_retry", err, { attempt });
     }
   }
 
-  return jsonResponse(
-    { success: false, error: "Unable to publish page. Please retry." },
-    { status: 500 },
-  );
+  return errorResponse("Unable to publish page. Please retry.", 500, {
+    code: "PUBLISH_FAILED",
+  });
 }

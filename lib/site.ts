@@ -1,8 +1,9 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { put } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
 import { hasBlobStorage } from "@/lib/env";
 import { getRedis } from "@/lib/redis";
+import { log } from "@/lib/log";
 
 const localRoot = path.join(process.cwd(), ".data");
 
@@ -61,12 +62,15 @@ export async function storePage(page: { id: string; html: string }) {
       contentType: "text/html; charset=utf-8",
     });
 
-    await redis.set(pageMetaKey(page.id), JSON.stringify({ url: blob.url }));
+    const meta = { url: blob.url, createdAt: new Date().toISOString(), size: page.html.length };
+    await redis.set(pageMetaKey(page.id), JSON.stringify(meta));
 
+    log("store_page", { id: page.id, size: page.html.length, storage: "blob+redis" });
     return { url: blob.url };
   }
 
   await localWrite(pageBlobPath(page.id), page.html);
+  log("store_page", { id: page.id, size: page.html.length, storage: "local" });
   return { url: null };
 }
 
@@ -113,8 +117,28 @@ export async function storeReport(id: string, body: unknown) {
   const redis = getRedis();
   if (redis) {
     await redis.set(reportKey(id), payload);
+    log("store_report", { id });
     return;
   }
 
   await localWrite(reportKey(id), payload);
+  log("store_report", { id, storage: "local" });
+}
+
+export async function removePage(id: string) {
+  const redis = getRedis();
+  if (hasBlobStorage() && redis) {
+    const raw = await redis.get(pageMetaKey(id));
+    if (typeof raw === "string") {
+      const meta = JSON.parse(raw) as { url: string };
+      await del(meta.url);
+    }
+    await redis.del(pageMetaKey(id));
+    log("remove_page", { id, storage: "blob+redis" });
+    return;
+  }
+
+  const filePath = path.join(localRoot, pageBlobPath(id));
+  await fs.unlink(filePath).catch(() => {});
+  log("remove_page", { id, storage: "local" });
 }

@@ -8,6 +8,13 @@ export function jsonResponse(body: unknown, init?: ResponseInit) {
   });
 }
 
+export function errorResponse(error: string, status: number, meta?: Record<string, unknown>) {
+  return jsonResponse(
+    { success: false, error, ...meta },
+    { status },
+  );
+}
+
 export function htmlResponse(html: string, init?: ResponseInit) {
   return new Response(html, {
     ...init,
