@@ -7,15 +7,10 @@ export type LimitResult = {
 };
 
 const publishLimiter = makeRateLimiter(20, "60 s");
-const filesLimiter = makeRateLimiter(10, "60 s");
 const globalLimiter = makeRateLimiter(200, "60 s");
 
 export async function rateLimitPublish(key: string): Promise<LimitResult> {
   return rateLimitWithFallback(publishLimiter, key, 20, 60_000);
-}
-
-export async function rateLimitFiles(key: string): Promise<LimitResult> {
-  return rateLimitWithFallback(filesLimiter, key, 10, 60_000);
 }
 
 export async function rateLimitGlobal(key: string): Promise<LimitResult> {

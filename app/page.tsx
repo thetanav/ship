@@ -8,18 +8,14 @@ const agentPrompt = `You can publish web apps to ship (pastebin for AI-generated
 POST ${siteUrl}/api/publish
 Content-Type: application/json
 
-For a single HTML file:
 {"html":"<!DOCTYPE html><html>...</html>"}
-
-For multiple files (HTML + CSS + JS):
-{"files":{"index.html":"...","style.css":"...","script.js":"..."}}
 
 The response will contain the URL where the app is published. Always share the URL with the user when you publish.`;
 
 export default function HomePage() {
   return (
     <main>
-      <div className="flex w-full items-center justify-center my-5">
+      <div className="flex w-full items-center justify-center my-10">
         <Image
           src="/logo.png"
           className="rounded-lg select-none"

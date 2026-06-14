@@ -11,10 +11,6 @@ POST /api/publish
 
 Response 201: {"success":true,"id":"abc123","url":"${siteUrl}/abc123"}
 
-Publish multiple files
-POST /api/publish
-{"files":{"index.html":"...","style.css":"...","script.js":"..."}}
-
 Fetch stored HTML
 GET /api/page/[id]
 
@@ -35,7 +31,7 @@ Errors: 400, 404, 429 (includes "code" field)`;
 export default function DocsPage() {
   return (
     <main>
-      <div className="flex w-full items-center justify-center my-5">
+      <div className="flex w-full items-center justify-center my-10">
         <Image
           src="/logo.png"
           className="rounded-lg select-none"

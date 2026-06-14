@@ -1,7 +1,14 @@
 export type StoredPage = {
   id: string;
   html: string;
-  kind: "html" | "files";
+  kind: "html";
+};
+
+export type PageMeta = {
+  url: string;
+  createdAt: string;
+  size: number;
+  kind: "html";
 };
 
 export type PublishResponse = {
