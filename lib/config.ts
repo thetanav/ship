@@ -1,4 +1,4 @@
 export const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
   process.env.SITE_URL ??
-  "https://ship.app";
+  "https://ship.tanav.me";

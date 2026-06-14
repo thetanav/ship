@@ -25,7 +25,6 @@ export function makeRateLimiter(requests: number, period: Duration) {
   return new Ratelimit({
     redis,
     limiter: Ratelimit.fixedWindow(requests, period),
-    analytics: true,
     prefix: "@ship/ratelimit",
   });
 }

@@ -1,22 +1,38 @@
 import Link from "next/link";
 import { siteUrl } from "@/lib/config";
-import Image from "next/image";
 import { CopyButton } from "@/components/copy-button";
+import Image from "next/image";
 
-const agentPrompt = `You can publish web apps to ship (pastebin for AI-generated apps). When the user asks you to create or share a web app, publish it to ship using this API:
+const apiSpec = `Base URL: ${siteUrl}
 
-POST ${siteUrl}/api/publish
-Content-Type: application/json
-
-For a single HTML file:
+Publish HTML
+POST /api/publish
 {"html":"<!DOCTYPE html><html>...</html>"}
 
-For multiple files (HTML + CSS + JS):
+Response 201: {"success":true,"id":"abc123","url":"${siteUrl}/abc123"}
+
+Publish multiple files
+POST /api/publish
 {"files":{"index.html":"...","style.css":"...","script.js":"..."}}
 
-The response will contain the URL where the app is published. Always share the URL with the user when you publish.`;
+Fetch stored HTML
+GET /api/page/[id]
 
-export default function HomePage() {
+Public page
+GET /[id]
+
+Report a page
+Email hey@tanav.me with the page ID and subject "REPORT"
+
+Page metadata
+GET /api/meta/[id]
+
+Health check
+GET /api/health
+
+Errors: 400, 404, 429 (includes "code" field)`;
+
+export default function DocsPage() {
   return (
     <main>
       <div className="flex w-full items-center justify-center my-5">
@@ -32,15 +48,13 @@ export default function HomePage() {
 
       <div className="flex items-start justify-between mt-6">
         <p className="text-text">pastebin for ai-generated apps.</p>
-        <CopyButton text={agentPrompt} />
+        <CopyButton text={apiSpec} />
       </div>
 
-      <p className="mt-1 text-sm text-muted">
-        Copy this prompt to give an AI agent the ability to publish apps to
-        ship.
-      </p>
+      <p className="mt-1 text-sm text-muted">API Specifications</p>
+
       <pre className="mt-8 text-sm leading-7 text-text whitespace-pre-wrap">
-        {agentPrompt}
+        {apiSpec}
       </pre>
     </main>
   );
