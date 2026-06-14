@@ -25,6 +25,8 @@ export async function storePage({ id, html }: { id: string; html: string }) {
     console.error("Failed to store page", err);
   }
 
+  if (!blob) return null;
+
   const meta: PageMeta = {
     url: blob.url,
     createdAt: new Date().toISOString(),
