@@ -1,18 +1,24 @@
 import { put } from "@vercel/blob";
-import { log } from "@/lib/log";
+import { log, logError } from "@/lib/log";
 import type { PageMeta } from "@/lib/types";
 import { pageKey } from "@/lib/id";
 import { redis } from "./redis";
 
-function pageBlobPath(id: string) {
+function pageBlobPath(id: string): string {
   return `pages/${id}.html`;
 }
 
-export async function pageExists(id: string) {
+export async function pageExists(id: string): Promise<boolean> {
   return Boolean(await redis?.get(pageKey(id)));
 }
 
-export async function storePage({ id, html }: { id: string; html: string }) {
+export async function storePage({
+  id,
+  html,
+}: {
+  id: string;
+  html: string;
+}): Promise<{ url: string } | null> {
   if (!redis) throw new Error("Redis is required");
 
   let blob;
@@ -22,7 +28,8 @@ export async function storePage({ id, html }: { id: string; html: string }) {
       contentType: "text/html; charset=utf-8",
     });
   } catch (err) {
-    console.error("Failed to store page", err);
+    logError("blob_store_failed", err, { id });
+    return null;
   }
 
   if (!blob) return null;
@@ -33,7 +40,12 @@ export async function storePage({ id, html }: { id: string; html: string }) {
     size: html.length,
     kind: "html",
   };
-  await redis.set(pageKey(id), meta);
+
+  try {
+    await redis.set(pageKey(id), meta);
+  } catch (err) {
+    logError("redis_meta_store_failed", err, { id });
+  }
 
   log("store_page", { id, size: html.length, storage: "blob+redis" });
   return { url: blob.url };
@@ -43,18 +55,25 @@ export async function storePage({ id, html }: { id: string; html: string }) {
  * Returns lightweight metadata for a page without fetching the full HTML from blob storage.
  * Preferred over getStoredPage when only kind/size are needed (e.g. the meta API endpoint).
  */
-export async function getPageMeta(id: string) {
+export async function getPageMeta(
+  id: string,
+): Promise<{ id: string; kind: "html"; size: number; url: string } | null> {
   const meta = await redis.get<PageMeta>(pageKey(id));
-  if (!meta || !meta.url) return null;
-  return { id, kind: "html" as const, size: meta.size, url: meta.url };
+  if (!meta?.url) return null;
+  return { id, kind: "html", size: meta.size, url: meta.url };
 }
 
-export async function getStoredPage(id: string) {
+export async function getStoredPage(
+  id: string,
+): Promise<{ id: string; html: string; kind: "html" } | null> {
   const meta = await redis.get<PageMeta>(pageKey(id));
-  if (!meta || !meta.url) return null;
+  if (!meta?.url) return null;
 
   const response = await fetch(meta.url, { cache: "no-store" });
-  if (!response.ok) return null;
+  if (!response.ok) {
+    logError("blob_fetch_failed", new Error(`HTTP ${response.status}`), { id });
+    return null;
+  }
 
-  return { id, html: await response.text(), kind: "html" as const };
+  return { id, html: await response.text(), kind: "html" };
 }

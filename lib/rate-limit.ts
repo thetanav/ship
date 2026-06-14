@@ -17,17 +17,31 @@ export async function rateLimitGlobal(key: string): Promise<LimitResult> {
   return rateLimitWithFallback(globalLimiter, key, 200, 60_000);
 }
 
-export async function rateLimitCheck(key: string, limit: number, windowMs: number): Promise<LimitResult> {
-  const limiter = makeRateLimiter(limit, `${Math.floor(windowMs / 1000)} s`);
+export async function rateLimitCheck(
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<LimitResult> {
+  const windowSeconds = Math.floor(windowMs / 1000);
+  const cacheKey = `custom:${limit}:${windowSeconds}`;
+
+  let limiter = limiterCache.get(cacheKey);
+  if (!limiter) {
+    limiter = makeRateLimiter(limit, `${windowSeconds} s`);
+    limiterCache.set(cacheKey, limiter);
+  }
+
   return rateLimitWithFallback(limiter, key, limit, windowMs);
 }
+
+const limiterCache = new Map<string, ReturnType<typeof makeRateLimiter>>();
 
 async function rateLimitWithFallback(
   limiter: ReturnType<typeof makeRateLimiter> | null,
   key: string,
   limit: number,
   windowMs: number,
-) {
+): Promise<LimitResult> {
   if (limiter) {
     const result = await limiter.limit(key);
     return {
@@ -57,7 +71,7 @@ async function rateLimitWithFallback(
   };
 }
 
-function cleanupExpiredBuckets() {
+function cleanupExpiredBuckets(): void {
   const now = Date.now();
   for (const [key, bucket] of fallbackBuckets) {
     if (bucket.resetAt <= now) {

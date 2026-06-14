@@ -1,14 +1,18 @@
 {
   "name": "ship",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "description": "Pastebin for AI-generated web apps",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run lint"
   },
   "dependencies": {
     "@upstash/ratelimit": "^2.0.5",

@@ -22,3 +22,12 @@ export type ApiError = {
   error: string;
   code?: string;
 };
+
+export type HealthResponse = {
+  status: "ok";
+  storage: "blob+redis" | "local";
+  hasBlobStorage: boolean;
+  hasRedis: boolean;
+  siteUrl: string;
+  timestamp: string;
+};

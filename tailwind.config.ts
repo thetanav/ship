@@ -1,11 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  darkMode: ["class"],
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-  ],
+  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
@@ -15,7 +11,13 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ["ui-monospace", "SFMono-Regular", "SF Mono", "Consolas", "monospace"],
+        mono: [
+          "ui-monospace",
+          "SFMono-Regular",
+          "SF Mono",
+          "Consolas",
+          "monospace",
+        ],
       },
     },
   },

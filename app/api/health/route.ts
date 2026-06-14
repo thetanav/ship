@@ -4,7 +4,7 @@ import { siteUrl } from "@/lib/config";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(): Promise<Response> {
   const blob = hasBlobStorage();
   const redis = hasUpstashRedis();
 

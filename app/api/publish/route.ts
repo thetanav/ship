@@ -3,6 +3,7 @@ import { createUniquePageId } from "@/lib/id";
 import { jsonResponse, errorResponse } from "@/lib/http";
 import { rateLimitPublish, rateLimitGlobal } from "@/lib/rate-limit";
 import { storePage } from "@/lib/site";
+import { sanitizeHtml } from "@/lib/sanitize";
 import type { PublishResponse } from "@/lib/types";
 import { log, logError } from "@/lib/log";
 import { siteUrl } from "@/lib/config";
@@ -11,11 +12,16 @@ const payloadSchema = z.object({
   html: z.string().min(1).max(1_000_000),
 });
 
-export async function POST(request: Request) {
-  const ip =
+function getClientIp(request: Request): string {
+  return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     request.headers.get("x-real-ip") ??
-    "unknown";
+    "unknown"
+  );
+}
+
+export async function POST(request: Request): Promise<Response> {
+  const ip = getClientIp(request);
 
   const global = await rateLimitGlobal(`global:${ip}`);
   if (!global.allowed) {
@@ -45,7 +51,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const html = parsed.data.html;
+  const html = sanitizeHtml(parsed.data.html);
   const id = await createUniquePageId(6);
 
   try {

@@ -1,6 +1,6 @@
 import { isDevelopment } from "@/lib/env";
 
-export function log(event: string, meta?: Record<string, unknown>) {
+export function log(event: string, meta?: Record<string, unknown>): void {
   const entry = {
     event,
     timestamp: new Date().toISOString(),
@@ -14,7 +14,11 @@ export function log(event: string, meta?: Record<string, unknown>) {
   }
 }
 
-export function logError(event: string, error: unknown, meta?: Record<string, unknown>) {
+export function logError(
+  event: string,
+  error: unknown,
+  meta?: Record<string, unknown>,
+): void {
   const entry = {
     event,
     timestamp: new Date().toISOString(),

@@ -18,22 +18,14 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <main className="mx-auto min-h-screen max-w-2xl px-6 py-16">
-          <div className="gap-3 flex opacity-60">
-            <Link
-              href="/"
-              prefetch={true}
-              className="underline underline-offset-2"
-            >
+          <nav className="flex gap-3 opacity-60">
+            <Link href="/" prefetch className="underline underline-offset-2">
               ship
             </Link>
-            <Link
-              href="/docs"
-              prefetch={true}
-              className="underline underline-offset-2"
-            >
+            <Link href="/docs" prefetch className="underline underline-offset-2">
               docs
             </Link>
-          </div>
+          </nav>
           {children}
         </main>
       </body>

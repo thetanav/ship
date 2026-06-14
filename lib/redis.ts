@@ -3,7 +3,10 @@ import { Redis } from "@upstash/redis";
 
 export const redis = Redis.fromEnv();
 
-export function makeRateLimiter(requests: number, period: Duration) {
+export function makeRateLimiter(
+  requests: number,
+  period: Duration,
+): Ratelimit | null {
   if (!redis) {
     return null;
   }
