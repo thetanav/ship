@@ -7,6 +7,28 @@ export const metadata: Metadata = {
   title: "ship",
   description: "Pastebin for AI-generated apps.",
   metadataBase: new URL(siteUrl),
+  icons: {
+    icon: "/favicon.ico",
+  },
+  openGraph: {
+    title: "ship",
+    description: "Pastebin for AI-generated apps.",
+    url: siteUrl,
+    siteName: "ship",
+    images: [
+      {
+        url: "/opengraph-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "ship - Pastebin for AI-generated apps",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/opengraph-image.jpg"],
+  },
 };
 
 export default function RootLayout({
