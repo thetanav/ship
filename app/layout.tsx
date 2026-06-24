@@ -44,6 +44,9 @@ export default function RootLayout({
             <Link href="/" prefetch className="underline underline-offset-2">
               ship
             </Link>
+            <Link href="/instant" prefetch className="underline underline-offset-2">
+              instant
+            </Link>
             <Link href="/docs" prefetch className="underline underline-offset-2">
               docs
             </Link>
