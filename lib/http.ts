@@ -3,7 +3,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   "referrer-policy": "no-referrer",
   "x-robots-tag": "noindex, nofollow",
   "content-security-policy":
-    "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; img-src * data: blob:; frame-ancestors 'none'; base-uri 'none'",
+    "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; script-src * data: blob: 'unsafe-inline' 'unsafe-eval'; style-src * data: blob: 'unsafe-inline'; img-src * data: blob:; font-src * data: blob:; frame-ancestors 'none'; base-uri 'none'",
 };
 
 export function jsonResponse(body: unknown, init?: ResponseInit): Response {

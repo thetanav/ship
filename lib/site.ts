@@ -1,8 +1,8 @@
 import { put } from "@vercel/blob";
-import { log, logError } from "@/lib/log";
 import type { PageMeta } from "@/lib/types";
 import { pageKey } from "@/lib/id";
 import { redis } from "./redis";
+import { log } from "./log";
 
 function pageBlobPath(id: string): string {
   return `pages/${id}.html`;
@@ -28,7 +28,6 @@ export async function storePage({
       contentType: "text/html; charset=utf-8",
     });
   } catch (err) {
-    logError("blob_store_failed", err, { id });
     return null;
   }
 
@@ -43,9 +42,7 @@ export async function storePage({
 
   try {
     await redis.set(pageKey(id), meta);
-  } catch (err) {
-    logError("redis_meta_store_failed", err, { id });
-  }
+  } catch (err) {}
 
   log("store_page", { id, size: html.length, storage: "blob+redis" });
   return { url: blob.url };
@@ -71,7 +68,6 @@ export async function getStoredPage(
 
   const response = await fetch(meta.url, { cache: "no-store" });
   if (!response.ok) {
-    logError("blob_fetch_failed", new Error(`HTTP ${response.status}`), { id });
     return null;
   }
 

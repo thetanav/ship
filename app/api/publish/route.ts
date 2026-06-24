@@ -3,9 +3,9 @@ import { createUniquePageId } from "@/lib/id";
 import { jsonResponse, errorResponse } from "@/lib/http";
 import { rateLimitPublish, rateLimitGlobal } from "@/lib/rate-limit";
 import { storePage } from "@/lib/site";
-import { sanitizeHtml } from "@/lib/sanitize";
+
 import type { PublishResponse } from "@/lib/types";
-import { log, logError } from "@/lib/log";
+
 import { siteUrl } from "@/lib/config";
 
 const payloadSchema = z.object({
@@ -25,7 +25,6 @@ export async function POST(request: Request): Promise<Response> {
 
   const global = await rateLimitGlobal(`global:${ip}`);
   if (!global.allowed) {
-    log("rate_limit_global", { ip, route: "publish" });
     return errorResponse("Rate limit exceeded.", 429, {
       code: "GLOBAL_RATE_LIMIT",
       retryAfter: Math.ceil((global.resetAt - Date.now()) / 1000),
@@ -44,20 +43,17 @@ export async function POST(request: Request): Promise<Response> {
 
   const limit = await rateLimitPublish(`publish:${ip}`);
   if (!limit.allowed) {
-    log("rate_limit_publish", { ip });
     return errorResponse("Rate limit exceeded.", 429, {
       code: "PUBLISH_RATE_LIMIT",
       retryAfter: Math.ceil((limit.resetAt - Date.now()) / 1000),
     });
   }
 
-  const html = sanitizeHtml(parsed.data.html);
+  const html = parsed.data.html;
   const id = await createUniquePageId(6);
 
   try {
     await storePage({ id, html });
-
-    log("publish_success", { id, size: html.length, ip });
 
     const response: PublishResponse = {
       success: true,
@@ -67,7 +63,6 @@ export async function POST(request: Request): Promise<Response> {
 
     return jsonResponse(response, { status: 201 });
   } catch (err) {
-    logError("publish_failed", err, { id, ip });
     return errorResponse("Unable to publish page. Please retry.", 500, {
       code: "PUBLISH_FAILED",
     });

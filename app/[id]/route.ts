@@ -1,6 +1,5 @@
-import { htmlResponse, errorResponse } from "@/lib/http";
+import { htmlResponse } from "@/lib/http";
 import { getStoredPage } from "@/lib/site";
-import { log } from "@/lib/log";
 
 const NOT_FOUND_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -39,8 +38,6 @@ export async function GET(
   if (!page) {
     return htmlResponse(NOT_FOUND_HTML, { status: 404 });
   }
-
-  log("page_serve", { id, size: page.html.length });
 
   return htmlResponse(page.html);
 }

@@ -12,16 +12,16 @@ POST /api/publish
 Response 201: {"success":true,"id":"abc123","url":"${siteUrl}/abc123"}
 
 Fetch stored HTML
-GET /api/page/[id]
+GET /api/page/[slug]
 
 Public page
-GET /[id]
+GET /[slug]
 
 Report a page
 Email hey@tanav.me with the page ID and subject "REPORT"
 
 Page metadata
-GET /api/meta/[id]
+GET /api/meta/[slug]
 
 Health check
 GET /api/health

@@ -73,12 +73,12 @@ Content-Type: application/json
 ### Fetch Stored HTML
 
 ```http
-GET /api/page/[id]
+GET /api/page/[slug]
 ```
 
 ### View Published Page
 
-Open `https://ship.tanav.me/[id]` in a browser.
+Open `https://ship.tanav.me/[slug]` in a browser.
 
 ### Health Check
 
@@ -97,10 +97,10 @@ Rate-limited responses include a `code` field and `retryAfter` in seconds.
 
 ```
 app/
-  [id]/route.ts              # GET /[id] - Serve published HTML
+  [slug]/route.ts              # GET /[slug] - Serve published HTML
   api/
     health/route.ts          # GET /api/health
-    page/[id]/route.ts       # GET /api/page/[id]
+    page/[slug]/route.ts       # GET /api/page/[slug]
     publish/route.ts         # POST /api/publish
   docs/page.tsx              # API documentation page
   layout.tsx                 # Root layout
@@ -115,14 +115,14 @@ lib/
   log.ts                     # Structured logging
   rate-limit.ts              # Rate limiting with Redis fallback
   redis.ts                   # Upstash Redis client
-  sanitize.ts                # HTML sanitization
+  sanitize.ts                # HTML helpers
   site.ts                    # Page storage/retrieval
   types.ts                   # TypeScript types
 ```
 
 ## Security
 
-- HTML is sanitized before storage (strips `on*` handlers, `javascript:` URLs, meta refresh)
+- HTML is stored and served raw, exactly as published
 - Content Security Policy headers on all HTML responses
 - `x-content-type-options: nosniff` prevents MIME sniffing
 - `referrer-policy: no-referrer` prevents data leakage

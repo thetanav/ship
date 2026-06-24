@@ -3,9 +3,7 @@ export function hasBlobStorage(): boolean {
 }
 
 export function hasUpstashRedis(): boolean {
-  return Boolean(
-    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
-  );
+  return Boolean(process.env.REDIS_URL);
 }
 
 export function isDevelopment(): boolean {
